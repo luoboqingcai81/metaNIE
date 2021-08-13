@@ -34,7 +34,8 @@ clean_byGroup <- function(meta_table, group) {
     dplyr::select(Data2) %>%
     tidyr::unnest_longer(Data2) %>%
     dplyr::distinct(Data2) %>%
-    unlist
+    unlist %>%
+    unname
   meta_table %>%
     dplyr::select(!where(is.numeric),all_of(Df))
 }
