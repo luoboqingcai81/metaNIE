@@ -1,47 +1,6 @@
 
 
 
-#' Combine table and metadata
-#'
-#' @param table tibble
-#' @param metadata tibble
-#' @param convert logical
-#'
-#' @return tibble
-#' @export
-#' @importFrom magrittr %>%
-NULL
-#' @examples
-#' data(metadata)
-#' data(ko_abundance)
-#' combine_table <- combine_metadata(ko_abundance, metadata, convert = T)
-combine_metadata <- function(table, metadata, convert = F) {
-  if (convert == T) {
-    if (!(((ncol(table) - 1) == nrow(metadata)) & all(metadata$sample %in% colnames(table)))) {
-      stop("the metadata sample is not equal to the table sample")
-    }
-    name <- colnames(table)[[1]]
-    table_convert <- table %>%
-      replace(is.na(.), 0) %>%
-      tidyr::pivot_longer(-{{ name }}, names_to = "sample", values_to = "Value") %>%
-      tidyr::pivot_wider(names_from = {{ name }}, values_from = Value) %>%
-      dplyr::select(!where(~ all(.x == 0))) %>%
-      dplyr::left_join(metadata, by = "sample") %>%
-      dplyr::relocate(where(is.numeric), .after = where(is.character)) %>%
-      dplyr::relocate(sample)
-    return(table_convert)
-  }
-  if (convert == F) {
-    if (!((nrow(table) - 1) == nrow(metadata)) & all(metadata$sample %in% rownames(table))) {
-      stop("the metadata sample is not equal to the table sample")
-    }
-    table_convert <- table %>%
-      dplyr::left_join(metadata, by = "sample") %>%
-      dplyr::relocate(where(is.numeric), .after = where(is.character)) %>%
-      dplyr::relocate(sample)
-  }
-}
-
 
 
 #' clean table by the group
@@ -61,6 +20,9 @@ clean_byGroup <- function(meta_table, group) {
     stop("group not in meta_table colnums")
   }
   Num_group <- length(dplyr::pull(meta_table, {{ group }})) / length(unique(dplyr::pull(meta_table, {{ group }})))
+  Data2 <- NULL
+  Value <- NULL
+  Data <- NULL
   Df <- meta_table %>%
     dplyr::group_nest({{ group }}, .key = "Data") %>%
     dplyr::mutate(Data2 = purrr::map(Data, function(df) {
@@ -71,9 +33,10 @@ clean_byGroup <- function(meta_table, group) {
     dplyr::ungroup() %>%
     dplyr::select(Data2) %>%
     tidyr::unnest_longer(Data2) %>%
-    dplyr::distinct(Data2)
+    dplyr::distinct(Data2) %>%
+    unlist
   meta_table %>%
-    dplyr::select(!where(is.numeric), Df$Data2)
+    dplyr::select(!where(is.numeric),all_of(Df))
 }
 
 
